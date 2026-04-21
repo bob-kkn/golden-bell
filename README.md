@@ -27,6 +27,7 @@ npm run verify:prod
 5. Actions \uc644\ub8cc \ud6c4 `https://<github-id>.github.io/<repo-name>/` \uc8fc\uc18c\ub85c \uc811\uc18d\ud569\ub2c8\ub2e4.
 
 \uc6cc\ud06c\ud50c\ub85c\ub294 [.github/workflows/deploy-pages.yml](./.github/workflows/deploy-pages.yml)\uc5d0 \uc788\uc2b5\ub2c8\ub2e4.
+\ucc98\uc74c \ud55c \ubc88\uc740 \uc800\uc7a5\uc18c\uc758 `Settings > Pages > Build and deployment` \uc5d0\uc11c \uc9c1\uc811 `GitHub Actions`\ub97c \uc120\ud0dd\ud574\uc57c \ud569\ub2c8\ub2e4. \uc774 \uc124\uc815\uc774 \uc5c6\uc73c\uba74 Pages API\uac00 \uc544\uc9c1 \uc0ac\uc774\ud2b8\ub97c \ucc3e\uc9c0 \ubabb\ud574 `Not Found` \uc624\ub958\uac00 \ub0a0 \uc218 \uc788\uc2b5\ub2c8\ub2e4.
 
 ## \uc6b4\uc601 \uc804\uc81c
 
