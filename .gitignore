@@ -1,0 +1,15 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+coverage/
+tmp/
+public/vendor/
+public/templates/
+*.log
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+started.txt
+.DS_Store
+Thumbs.db
