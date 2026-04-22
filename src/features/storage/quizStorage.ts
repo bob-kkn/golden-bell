@@ -62,7 +62,8 @@ function isQuestion(value: unknown): value is Question {
   if (
     value.type !== "short_text" &&
     value.type !== "ox" &&
-    value.type !== "manual"
+    value.type !== "manual" &&
+    value.type !== "multiple_choice"
   ) {
     return false;
   }
@@ -85,6 +86,18 @@ function isQuestion(value: unknown): value is Question {
 
   if (value.type === "ox") {
     return value.correctChoice === "O" || value.correctChoice === "X";
+  }
+
+  if (value.type === "multiple_choice") {
+    return (
+      Array.isArray(value.choices) &&
+      value.choices.length >= 2 &&
+      value.choices.every((choice) => typeof choice === "string") &&
+      typeof value.correctChoiceIndex === "number" &&
+      Number.isInteger(value.correctChoiceIndex) &&
+      value.correctChoiceIndex >= 0 &&
+      value.correctChoiceIndex < value.choices.length
+    );
   }
 
   return value.answerText === undefined || typeof value.answerText === "string";

@@ -89,6 +89,10 @@ export function getAnswerText(question: Question): string {
     return question.correctChoice;
   }
 
+  if (question.type === "multiple_choice") {
+    return `${question.correctChoiceIndex + 1}번`;
+  }
+
   return question.answerText ?? "진행자 확인";
 }
 

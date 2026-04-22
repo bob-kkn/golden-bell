@@ -1,4 +1,4 @@
-export type QuestionType = "short_text" | "ox" | "manual";
+export type QuestionType = "short_text" | "ox" | "manual" | "multiple_choice";
 export type SessionPhase = "intro" | "rules" | "question" | "answer" | "leaderboard";
 
 export interface QuizQuestionBase {
@@ -27,7 +27,13 @@ export interface ManualQuestion extends QuizQuestionBase {
   answerText?: string;
 }
 
-export type Question = ShortTextQuestion | OxQuestion | ManualQuestion;
+export interface MultipleChoiceQuestion extends QuizQuestionBase {
+  type: "multiple_choice";
+  choices: string[];
+  correctChoiceIndex: number;
+}
+
+export type Question = ShortTextQuestion | OxQuestion | ManualQuestion | MultipleChoiceQuestion;
 
 export interface QuizSet {
   id: string;

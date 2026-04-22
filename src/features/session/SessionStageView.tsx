@@ -13,23 +13,31 @@ function getQuestionTypeLabel(type: QuizSet["questions"][number]["type"]): strin
     return "O/X 퀴즈";
   }
 
+  if (type === "multiple_choice") {
+    return "객관식";
+  }
+
   if (type === "manual") {
     return "손들기 문제";
   }
 
-  return "빈칸 맞추기";
+  return "빈칸 맞히기";
 }
 
 function getInstruction(question: Question): string {
   if (question.type === "ox") {
-    return "O 또는 X를 크게 들어 주세요";
+    return "O 또는 X를 크게 들어 주세요.";
+  }
+
+  if (question.type === "multiple_choice") {
+    return "정답 번호를 고르고 기억해 주세요.";
   }
 
   if (question.type === "manual") {
-    return "손들고 답할 친구를 골라 주세요";
+    return "손들고 대답할 친구를 골라 주세요.";
   }
 
-  return "정답판에 또박또박 적어 주세요";
+  return "정답칸에 또박또박 적어 주세요.";
 }
 
 function getPhaseTitle(phase: SessionPhase): string {
@@ -49,7 +57,29 @@ function getPhaseTitle(phase: SessionPhase): string {
     return "최종 순위";
   }
 
-  return "문제판";
+  return "문제";
+}
+
+function renderMultipleChoiceOptions(
+  question: Extract<Question, { type: "multiple_choice" }>,
+  tone: "host" | "screen",
+  revealAnswer: boolean,
+) {
+  return (
+    <div className={`multiple-choice-grid multiple-choice-grid--${tone}`}>
+      {question.choices.map((choice, index) => (
+        <div
+          className={`multiple-choice-card multiple-choice-card--${tone} ${
+            revealAnswer && index === question.correctChoiceIndex ? "is-correct" : ""
+          }`}
+          key={`${question.id}-choice-${index + 1}`}
+        >
+          <span className="multiple-choice-card__label">{index + 1}</span>
+          <span className="multiple-choice-card__text">{choice}</span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function renderHostView(quizSet: QuizSet, state: SessionState) {
@@ -67,7 +97,9 @@ function renderHostView(quizSet: QuizSet, state: SessionState) {
         <div className="host-board__body">
           <p className="host-board__eyebrow">오늘의 시작</p>
           <h2 className="host-board__title">{quizSet.title}</h2>
-          <p className="host-board__subtitle">{quizSet.subtitle || "발표 화면을 열고 규칙부터 시작해 주세요."}</p>
+          <p className="host-board__subtitle">
+            {quizSet.subtitle || "발표 화면을 띄우고 규칙부터 시작해 주세요."}
+          </p>
         </div>
       </section>
     );
@@ -81,7 +113,7 @@ function renderHostView(quizSet: QuizSet, state: SessionState) {
           <span className="badge">{quizSet.rules.length}개 항목</span>
         </div>
         <div className="host-board__body">
-          <h2 className="host-board__title">학생들에게 먼저 안내해 주세요</h2>
+          <h2 className="host-board__title">학생들에게 먼저 안내해 주세요.</h2>
           <ol className="host-rules">
             {quizSet.rules.map((rule, index) => (
               <li className="host-rules__item" key={rule}>
@@ -149,6 +181,9 @@ function renderHostView(quizSet: QuizSet, state: SessionState) {
             <span>X</span>
           </div>
         ) : null}
+        {currentQuestion.type === "multiple_choice"
+          ? renderMultipleChoiceOptions(currentQuestion, "host", state.phase === "answer")
+          : null}
       </div>
       <div className="host-board__footer">
         {state.phase === "question" && state.timer.enabled ? (
@@ -214,7 +249,9 @@ function renderScreenView(quizSet: QuizSet, state: SessionState) {
           <div className="screen-board__body screen-board__body--intro">
             <p className="screen-board__eyebrow">READY?</p>
             <h1 className="screen-board__title">{quizSet.title}</h1>
-            <p className="screen-board__subtitle">{quizSet.subtitle || "준비가 되면 바로 문제판을 시작합니다."}</p>
+            <p className="screen-board__subtitle">
+              {quizSet.subtitle || "준비가 되면 바로 문제판을 시작합니다."}
+            </p>
             <div className="screen-stage__status">
               <span>{state.participants.length}명 도전 준비 완료</span>
               <span>{quizSet.questions.length}문항 진행</span>
@@ -225,7 +262,7 @@ function renderScreenView(quizSet: QuizSet, state: SessionState) {
         {state.phase === "rules" ? (
           <div className="screen-board__body">
             <p className="screen-board__eyebrow">GAME RULE</p>
-            <h2 className="screen-board__title">다 같이 집중해 주세요</h2>
+            <h2 className="screen-board__title">다 같이 집중해 주세요.</h2>
             <ol className="screen-rules">
               {quizSet.rules.map((rule, index) => (
                 <li className="screen-rules__item" key={rule}>
@@ -243,7 +280,13 @@ function renderScreenView(quizSet: QuizSet, state: SessionState) {
             <h2 className="screen-prompt">{currentQuestion.prompt}</h2>
             <div className="screen-stage__status">
               <span>{getInstruction(currentQuestion)}</span>
-              <span>{currentQuestion.type === "manual" ? "가장 먼저 준비된 친구에게 기회" : "정답 공개 전까지 조용히 생각하기"}</span>
+              <span>
+                {currentQuestion.type === "manual"
+                  ? "가장 먼저 준비된 친구에게 기회"
+                  : currentQuestion.type === "multiple_choice"
+                    ? "생각한 정답 번호를 기억해 주세요"
+                    : "정답 공개 전까지 조용히 생각하기"}
+              </span>
             </div>
             {currentQuestion.type === "ox" ? (
               <div className="screen-choice-row">
@@ -251,6 +294,9 @@ function renderScreenView(quizSet: QuizSet, state: SessionState) {
                 <span>X</span>
               </div>
             ) : null}
+            {currentQuestion.type === "multiple_choice"
+              ? renderMultipleChoiceOptions(currentQuestion, "screen", false)
+              : null}
           </div>
         ) : null}
 
@@ -263,6 +309,9 @@ function renderScreenView(quizSet: QuizSet, state: SessionState) {
               <span>{currentQuestion.points}점 획득 문제</span>
               <span>{currentQuestion.explanation || "다음 Enter로 다음 문제로 넘어갑니다."}</span>
             </div>
+            {currentQuestion.type === "multiple_choice"
+              ? renderMultipleChoiceOptions(currentQuestion, "screen", true)
+              : null}
           </div>
         ) : null}
 

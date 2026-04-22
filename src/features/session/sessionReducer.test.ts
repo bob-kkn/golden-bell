@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { sampleQuizSet } from "../import/sampleQuiz";
-import { createInitialSessionState, createParticipants, getLeaderboard, sessionReducer } from "./sessionReducer";
+import { createInitialSessionState, createParticipants, getAnswerText, getLeaderboard, sessionReducer } from "./sessionReducer";
 
 describe("sessionReducer", () => {
   it("문제 진행과 점수 반영이 동작한다", () => {
@@ -94,15 +94,25 @@ describe("sessionReducer", () => {
     expect(snapshot.state.phase).toBe("answer");
   });
 
-  it("동점은 공동 순위로 계산한다", () => {
+  it("동점은 공동 순위로 계산된다", () => {
     const leaderboard = getLeaderboard([
       { id: "1", name: "민호", score: 5, correctCount: 2, wrongCount: 0 },
       { id: "2", name: "수아", score: 5, correctCount: 2, wrongCount: 1 },
-      { id: "3", name: "지후", score: 3, correctCount: 1, wrongCount: 0 },
+      { id: "3", name: "지윤", score: 3, correctCount: 1, wrongCount: 0 },
     ]);
 
     expect(leaderboard[0].rank).toBe(1);
     expect(leaderboard[1].rank).toBe(1);
     expect(leaderboard[2].rank).toBe(3);
+  });
+
+  it("객관식 정답은 보기 번호로 표시된다", () => {
+    const question = sampleQuizSet.questions.find((item) => item.type === "multiple_choice");
+
+    if (!question || question.type !== "multiple_choice") {
+      throw new Error("객관식 샘플 문항을 찾지 못했습니다.");
+    }
+
+    expect(getAnswerText(question)).toBe("1번");
   });
 });

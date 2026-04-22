@@ -1,6 +1,7 @@
 import type { Question, QuizSet } from "../../types/quiz";
 
 const REQUIRED_QUESTION_HEADERS = ["order", "type", "prompt", "answer", "points"] as const;
+const CHOICE_HEADER_PATTERN = /^choice(\d+)$/;
 
 export interface WorksheetTableData {
   headers: string[];
@@ -32,7 +33,28 @@ function normalizeType(value: string): Question["type"] | null {
     return "manual";
   }
 
+  if (
+    normalized === "multiple_choice" ||
+    normalized === "multiple-choice" ||
+    normalized === "multiplechoice" ||
+    normalized === "choice" ||
+    normalized === "mcq"
+  ) {
+    return "multiple_choice";
+  }
+
   return null;
+}
+
+function getChoiceHeaders(headers: string[]): string[] {
+  return headers
+    .map((header) => {
+      const match = header.match(CHOICE_HEADER_PATTERN);
+      return match ? { header, order: Number(match[1]) } : null;
+    })
+    .filter((item): item is { header: string; order: number } => item !== null)
+    .sort((left, right) => left.order - right.order)
+    .map((item) => item.header);
 }
 
 function ensureThemeColor(value: string): string | undefined {
@@ -54,7 +76,7 @@ function parsePositiveInteger(value: unknown, fieldName: string, rowIndex: numbe
   return numeric;
 }
 
-function buildQuestion(row: Record<string, unknown>, rowIndex: number): Question {
+function buildQuestion(row: Record<string, unknown>, rowIndex: number, headers: string[]): Question {
   const order = parsePositiveInteger(row.order, "order", rowIndex);
 
   if (order < 1) {
@@ -65,7 +87,7 @@ function buildQuestion(row: Record<string, unknown>, rowIndex: number): Question
 
   if (!type) {
     throw new Error(
-      `questions \uc2dc\ud2b8 ${rowIndex}\ud589\uc758 type \uac12\uc740 short_text, ox, manual \uc911 \ud558\ub098\uc5ec\uc57c \ud569\ub2c8\ub2e4.`,
+      `questions \uc2dc\ud2b8 ${rowIndex}\ud589\uc758 type \uac12\uc740 short_text, ox, manual, multiple_choice \uc911 \ud558\ub098\uc5ec\uc57c \ud569\ub2c8\ub2e4.`,
     );
   }
 
@@ -122,6 +144,41 @@ function buildQuestion(row: Record<string, unknown>, rowIndex: number): Question
     };
   }
 
+  if (type === "multiple_choice") {
+    const choiceHeaders = getChoiceHeaders(headers);
+    const rawChoices = choiceHeaders.map((header) => normalizeString(row[header]));
+    const firstBlankIndex = rawChoices.findIndex((choice) => !choice);
+
+    if (firstBlankIndex >= 0 && rawChoices.slice(firstBlankIndex + 1).some(Boolean)) {
+      throw new Error(
+        `questions \uc2dc\ud2b8 ${rowIndex}\ud589\uc758 choice \uceec\ub7fc\uc740 \uc55e\uc5d0\uc11c\ubd80\ud130 \uc21c\uc11c\ub300\ub85c \ucc44\uc6cc\uc57c \ud569\ub2c8\ub2e4.`,
+      );
+    }
+
+    const choices = rawChoices.filter(Boolean);
+
+    if (choices.length < 2) {
+      throw new Error(
+        `questions \uc2dc\ud2b8 ${rowIndex}\ud589\uc758 multiple_choice \ubb38\ud56d\uc740 \ucd5c\uc18c 2\uac1c \uc774\uc0c1\uc758 choice \uac12\uc774 \ud544\uc694\ud569\ub2c8\ub2e4.`,
+      );
+    }
+
+    const answerNumber = parsePositiveInteger(rawAnswer, "answer", rowIndex);
+
+    if (answerNumber < 1 || answerNumber > choices.length) {
+      throw new Error(
+        `questions \uc2dc\ud2b8 ${rowIndex}\ud589\uc758 multiple_choice \ubb38\ud56d answer \uac12\uc740 1~${choices.length} \uc0ac\uc774\uc5ec\uc57c \ud569\ub2c8\ub2e4.`,
+      );
+    }
+
+    return {
+      ...base,
+      type,
+      choices,
+      correctChoiceIndex: answerNumber - 1,
+    };
+  }
+
   return {
     ...base,
     type,
@@ -165,7 +222,7 @@ export function parseQuizData(workbookData: QuizWorkbookData): QuizSet {
     throw new Error("rules \uc2dc\ud2b8\uc5d0\ub294 \ucd5c\uc18c 1\uac1c\uc758 rule \uac12\uc774 \ud544\uc694\ud569\ub2c8\ub2e4.");
   }
 
-  const questions = questionTable.rows.map((row, index) => buildQuestion(row, index + 2));
+  const questions = questionTable.rows.map((row, index) => buildQuestion(row, index + 2, questionTable.headers));
   const orderSet = new Set<number>();
 
   for (const question of questions) {

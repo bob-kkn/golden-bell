@@ -454,6 +454,61 @@ button {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.multiple-choice-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.multiple-choice-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  align-items: center;
+  min-height: 104px;
+  padding: 16px 18px;
+  border-radius: 8px;
+  border: 2px solid var(--border);
+}
+
+.multiple-choice-card--host {
+  background: linear-gradient(180deg, #ffffff 0%, #f5f8ff 100%);
+}
+
+.multiple-choice-card--screen {
+  background: linear-gradient(180deg, #ffffff 0%, #f5f8ff 100%);
+  box-shadow: 0 10px 22px rgba(21, 33, 61, 0.08);
+}
+
+.multiple-choice-card.is-correct {
+  border-color: #efc85c;
+  background: linear-gradient(180deg, #fff8d7 0%, #ffeaa0 100%);
+}
+
+.multiple-choice-card__label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.multiple-choice-card.is-correct .multiple-choice-card__label {
+  background: #d94f45;
+}
+
+.multiple-choice-card__text {
+  font-size: clamp(20px, 1.8vw, 28px);
+  font-weight: 800;
+  color: #22314c;
+  word-break: keep-all;
+}
+
 .host-choice-row span,
 .screen-choice-row span {
   display: grid;
@@ -816,7 +871,8 @@ button {
   }
 
   .screen-choice-row,
-  .host-choice-row {
+  .host-choice-row,
+  .multiple-choice-grid {
     grid-template-columns: 1fr;
   }
 

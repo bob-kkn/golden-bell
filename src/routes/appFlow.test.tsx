@@ -68,17 +68,14 @@ describe("app flow", () => {
 
     window.localStorage.setItem("golden-bell:quiz-sets", JSON.stringify([]));
 
-    const screenView = renderMemoryRoutes(
-      [{ path: "/screen/:sessionId", element: <ScreenPage /> }],
-      ["/screen/session-sync"],
-    );
+    const screenView = renderMemoryRoutes([{ path: "/screen/:sessionId", element: <ScreenPage /> }], ["/screen/session-sync"]);
 
     const screenRoot = within(screenView.container);
     expect((await screenRoot.findAllByText(customQuizSet.title)).length).toBeGreaterThan(0);
     expect(screenRoot.getByText("사회")).toBeTruthy();
   });
 
-  it("BroadcastChannel이 없어도 storage 이벤트로 발표 화면이 갱신된다", async () => {
+  it("BroadcastChannel이 없어도 storage 이벤트로 발표 화면을 갱신한다", async () => {
     vi.stubGlobal("BroadcastChannel", undefined);
 
     const session = createInitialSessionState(sampleQuizSet, createParticipants(["민호"]), "session-storage-sync");

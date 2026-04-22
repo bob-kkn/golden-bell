@@ -20,7 +20,20 @@ function createWorkbookData(): QuizWorkbookData {
       rows: [{ rule: "\ubb38\uc81c\ub97c \ubcf4\uace0 \ub2f5\uc744 \uc801\uc5b4\uc694." }],
     },
     questions: {
-      headers: ["order", "type", "prompt", "answer", "points", "timerSeconds", "bonusLabel", "explanation"],
+      headers: [
+        "order",
+        "type",
+        "prompt",
+        "answer",
+        "points",
+        "timerSeconds",
+        "bonusLabel",
+        "explanation",
+        "choice1",
+        "choice2",
+        "choice3",
+        "choice4",
+      ],
       rows: [
         {
           order: 2,
@@ -31,6 +44,10 @@ function createWorkbookData(): QuizWorkbookData {
           timerSeconds: 15,
           bonusLabel: "",
           explanation: "",
+          choice1: "",
+          choice2: "",
+          choice3: "",
+          choice4: "",
         },
         {
           order: 1,
@@ -41,6 +58,24 @@ function createWorkbookData(): QuizWorkbookData {
           timerSeconds: 20,
           bonusLabel: "",
           explanation: "\ub2f5\uc548 \uac1c\ub150\uc785\ub2c8\ub2e4.",
+          choice1: "",
+          choice2: "",
+          choice3: "",
+          choice4: "",
+        },
+        {
+          order: 3,
+          type: "multiple_choice",
+          prompt: "\uac1d\uad00\uc2dd \ubb38\ud56d\uc785\ub2c8\ub2e4.",
+          answer: 2,
+          points: 3,
+          timerSeconds: 25,
+          bonusLabel: "",
+          explanation: "",
+          choice1: "\uc120\ud0dd\uc9c0 1",
+          choice2: "\uc120\ud0dd\uc9c0 2",
+          choice3: "\uc120\ud0dd\uc9c0 3",
+          choice4: "\uc120\ud0dd\uc9c0 4",
         },
       ],
     },
@@ -52,10 +87,15 @@ describe("parseQuizData", () => {
     const parsed = parseQuizData(createWorkbookData());
 
     expect(parsed.title).toBe("\uad6d\uc5b4 3\uc6d4 \uace8\ub4e0\ubca8");
-    expect(parsed.questions).toHaveLength(2);
+    expect(parsed.questions).toHaveLength(3);
     expect(parsed.questions[0].order).toBe(1);
     expect(parsed.questions[0].type).toBe("short_text");
     expect(parsed.questions[1].type).toBe("ox");
+    expect(parsed.questions[2]).toMatchObject({
+      type: "multiple_choice",
+      choices: ["\uc120\ud0dd\uc9c0 1", "\uc120\ud0dd\uc9c0 2", "\uc120\ud0dd\uc9c0 3", "\uc120\ud0dd\uc9c0 4"],
+      correctChoiceIndex: 1,
+    });
   });
 
   it("\ud544\uc218 \uceec\ub7fc\uc774 \uc5c6\uc73c\uba74 \uc989\uc2dc \uc5d0\ub7ec\ub97c \ubc18\ud658\ud55c\ub2e4", () => {
