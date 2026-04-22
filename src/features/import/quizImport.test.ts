@@ -7,17 +7,17 @@ function createWorkbookData(): QuizWorkbookData {
       headers: ["subject", "setName", "title", "subtitle", "themeColor"],
       rows: [
         {
-          subject: "\uad6d\uc5b4",
-          setName: "3\uc6d4",
-          title: "\uad6d\uc5b4 3\uc6d4 \uace8\ub4e0\ubca8",
-          subtitle: "\ub370\ubaa8",
+          subject: "국어",
+          setName: "3월",
+          title: "국어 3월 골든벨",
+          subtitle: "데모",
           themeColor: "#4472C4",
         },
       ],
     },
     rules: {
       headers: ["rule"],
-      rows: [{ rule: "\ubb38\uc81c\ub97c \ubcf4\uace0 \ub2f5\uc744 \uc801\uc5b4\uc694." }],
+      rows: [{ rule: "문제를 보고 답을 적어요." }],
     },
     questions: {
       headers: [
@@ -26,6 +26,7 @@ function createWorkbookData(): QuizWorkbookData {
         "prompt",
         "answer",
         "points",
+        "difficulty",
         "timerSeconds",
         "bonusLabel",
         "explanation",
@@ -38,9 +39,10 @@ function createWorkbookData(): QuizWorkbookData {
         {
           order: 2,
           type: "ox",
-          prompt: "\uc815\ub2f5\uc740 O\uc77c\uae4c\uc694?",
+          prompt: "정답은 O일까요?",
           answer: "O",
           points: 2,
+          difficulty: 1,
           timerSeconds: 15,
           bonusLabel: "",
           explanation: "",
@@ -52,12 +54,13 @@ function createWorkbookData(): QuizWorkbookData {
         {
           order: 1,
           type: "short_text",
-          prompt: "\ube48\uce78\uc744 \ucc44\uc6cc \ubcf4\uc138\uc694.",
-          answer: "\uac00\uce58",
+          prompt: "빈칸을 채워 보세요.",
+          answer: "가치",
           points: 1,
+          difficulty: 2,
           timerSeconds: 20,
           bonusLabel: "",
-          explanation: "\ub2f5\uc548 \uac1c\ub150\uc785\ub2c8\ub2e4.",
+          explanation: "답안 개념입니다.",
           choice1: "",
           choice2: "",
           choice3: "",
@@ -66,16 +69,17 @@ function createWorkbookData(): QuizWorkbookData {
         {
           order: 3,
           type: "multiple_choice",
-          prompt: "\uac1d\uad00\uc2dd \ubb38\ud56d\uc785\ub2c8\ub2e4.",
+          prompt: "객관식 문항입니다.",
           answer: 2,
           points: 3,
+          difficulty: 2,
           timerSeconds: 25,
           bonusLabel: "",
           explanation: "",
-          choice1: "\uc120\ud0dd\uc9c0 1",
-          choice2: "\uc120\ud0dd\uc9c0 2",
-          choice3: "\uc120\ud0dd\uc9c0 3",
-          choice4: "\uc120\ud0dd\uc9c0 4",
+          choice1: "선택지 1",
+          choice2: "선택지 2",
+          choice3: "선택지 3",
+          choice4: "선택지 4",
         },
       ],
     },
@@ -83,26 +87,33 @@ function createWorkbookData(): QuizWorkbookData {
 }
 
 describe("parseQuizData", () => {
-  it("\uc5d1\uc140 \ub370\uc774\ud130\ub97c QuizSet\uc73c\ub85c \ubcc0\ud658\ud55c\ub2e4", () => {
+  it("엑셀 데이터를 QuizSet으로 변환한다", () => {
     const parsed = parseQuizData(createWorkbookData());
 
-    expect(parsed.title).toBe("\uad6d\uc5b4 3\uc6d4 \uace8\ub4e0\ubca8");
+    expect(parsed.title).toBe("국어 3월 골든벨");
     expect(parsed.questions).toHaveLength(3);
-    expect(parsed.questions[0].order).toBe(1);
-    expect(parsed.questions[0].type).toBe("short_text");
-    expect(parsed.questions[1].type).toBe("ox");
+    expect(parsed.questions[0]).toMatchObject({
+      order: 1,
+      type: "short_text",
+      difficulty: 2,
+    });
+    expect(parsed.questions[1]).toMatchObject({
+      type: "ox",
+      difficulty: 1,
+    });
     expect(parsed.questions[2]).toMatchObject({
       type: "multiple_choice",
-      choices: ["\uc120\ud0dd\uc9c0 1", "\uc120\ud0dd\uc9c0 2", "\uc120\ud0dd\uc9c0 3", "\uc120\ud0dd\uc9c0 4"],
+      difficulty: 2,
+      choices: ["선택지 1", "선택지 2", "선택지 3", "선택지 4"],
       correctChoiceIndex: 1,
     });
   });
 
-  it("\ud544\uc218 \uceec\ub7fc\uc774 \uc5c6\uc73c\uba74 \uc989\uc2dc \uc5d0\ub7ec\ub97c \ubc18\ud658\ud55c\ub2e4", () => {
+  it("필수 컬럼이 없으면 즉시 에러를 반환한다", () => {
     const workbookData = createWorkbookData();
     workbookData.questions.headers = ["order", "type", "prompt", "answer"];
-    workbookData.questions.rows = [{ order: 1, type: "short_text", prompt: "\ubb38\uc81c", answer: "\uc815\ub2f5" }];
+    workbookData.questions.rows = [{ order: 1, type: "short_text", prompt: "문제", answer: "정답" }];
 
-    expect(() => parseQuizData(workbookData)).toThrowError(/points \uceec\ub7fc/);
+    expect(() => parseQuizData(workbookData)).toThrowError(/points 컬럼/);
   });
 });

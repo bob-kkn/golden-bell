@@ -7,6 +7,7 @@ export interface QuizQuestionBase {
   type: QuestionType;
   prompt: string;
   points: number;
+  difficulty?: number;
   timerSeconds?: number;
   bonusLabel?: string;
   explanation?: string;

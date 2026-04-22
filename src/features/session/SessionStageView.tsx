@@ -21,23 +21,23 @@ function getQuestionTypeLabel(type: QuizSet["questions"][number]["type"]): strin
     return "손들기 문제";
   }
 
-  return "빈칸 맞히기";
+  return "단답형";
 }
 
 function getInstruction(question: Question): string {
   if (question.type === "ox") {
-    return "O 또는 X를 크게 들어 주세요.";
+    return "O 또는 X를 크게 표시해 주세요.";
   }
 
   if (question.type === "multiple_choice") {
-    return "정답 번호를 고르고 기억해 주세요.";
+    return "정답 번호를 기억하고 손들 준비를 하세요.";
   }
 
   if (question.type === "manual") {
-    return "손들고 대답할 친구를 골라 주세요.";
+    return "순서대로 말할 준비를 하세요.";
   }
 
-  return "정답칸에 또박또박 적어 주세요.";
+  return "정답이 떠오르면 손들고 말할 준비를 하세요.";
 }
 
 function getPhaseTitle(phase: SessionPhase): string {
@@ -58,6 +58,15 @@ function getPhaseTitle(phase: SessionPhase): string {
   }
 
   return "문제";
+}
+
+function formatStars(count: number): string {
+  const normalized = Math.max(1, Math.round(count));
+  return "★".repeat(normalized);
+}
+
+function getDifficulty(question: Question): number {
+  return question.difficulty ?? question.points;
 }
 
 function renderMultipleChoiceOptions(
@@ -95,7 +104,7 @@ function renderHostView(quizSet: QuizSet, state: SessionState) {
           <span className="badge">{state.participants.length}명 준비 완료</span>
         </div>
         <div className="host-board__body">
-          <p className="host-board__eyebrow">오늘의 시작</p>
+          <p className="host-board__eyebrow">READY TO START</p>
           <h2 className="host-board__title">{quizSet.title}</h2>
           <p className="host-board__subtitle">
             {quizSet.subtitle || "발표 화면을 띄우고 규칙부터 시작해 주세요."}
@@ -163,7 +172,8 @@ function renderHostView(quizSet: QuizSet, state: SessionState) {
       <div className="host-board__header">
         <span className="badge">{getQuestionTypeLabel(currentQuestion.type)}</span>
         <span className="badge">{currentQuestion.order}번</span>
-        <span className="badge">{currentQuestion.points}점</span>
+        <span className="badge">점수 {formatStars(currentQuestion.points)}</span>
+        <span className="badge">난이도 {formatStars(getDifficulty(currentQuestion))}</span>
         {currentQuestion.bonusLabel ? <span className="badge">{currentQuestion.bonusLabel}</span> : null}
       </div>
       <div className="host-board__body">
@@ -234,7 +244,8 @@ function renderScreenView(quizSet: QuizSet, state: SessionState) {
           {showQuestionMeta ? (
             <div className="screen-board__meta">
               <span>{getQuestionTypeLabel(currentQuestion.type)}</span>
-              <span>{currentQuestion.points}점</span>
+              <span>점수 {formatStars(currentQuestion.points)}</span>
+              <span>난이도 {formatStars(getDifficulty(currentQuestion))}</span>
               {currentQuestion.bonusLabel ? <span>{currentQuestion.bonusLabel}</span> : null}
             </div>
           ) : (
@@ -250,7 +261,7 @@ function renderScreenView(quizSet: QuizSet, state: SessionState) {
             <p className="screen-board__eyebrow">READY?</p>
             <h1 className="screen-board__title">{quizSet.title}</h1>
             <p className="screen-board__subtitle">
-              {quizSet.subtitle || "준비가 되면 바로 문제판을 시작합니다."}
+              {quizSet.subtitle || "준비가 되면 바로 문제를 시작합니다."}
             </p>
             <div className="screen-stage__status">
               <span>{state.participants.length}명 도전 준비 완료</span>
@@ -282,10 +293,10 @@ function renderScreenView(quizSet: QuizSet, state: SessionState) {
               <span>{getInstruction(currentQuestion)}</span>
               <span>
                 {currentQuestion.type === "manual"
-                  ? "가장 먼저 준비된 친구에게 기회"
+                  ? "순서를 끝까지 말하면 정답입니다."
                   : currentQuestion.type === "multiple_choice"
-                    ? "생각한 정답 번호를 기억해 주세요"
-                    : "정답 공개 전까지 조용히 생각하기"}
+                    ? "선택지를 보고 정답 번호를 기억하세요."
+                    : "정답 공개 전까지 조용히 생각하세요."}
               </span>
             </div>
             {currentQuestion.type === "ox" ? (
@@ -306,8 +317,8 @@ function renderScreenView(quizSet: QuizSet, state: SessionState) {
             <h2 className="screen-prompt">{currentQuestion.prompt}</h2>
             <p className="screen-answer">{getAnswerText(currentQuestion)}</p>
             <div className="screen-stage__status">
-              <span>{currentQuestion.points}점 획득 문제</span>
-              <span>{currentQuestion.explanation || "다음 Enter로 다음 문제로 넘어갑니다."}</span>
+              <span>획득 점수 {formatStars(currentQuestion.points)}</span>
+              <span>{currentQuestion.explanation || "다음 입력으로 다음 문항으로 넘어갑니다."}</span>
             </div>
             {currentQuestion.type === "multiple_choice"
               ? renderMultipleChoiceOptions(currentQuestion, "screen", true)

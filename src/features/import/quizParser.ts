@@ -66,28 +66,28 @@ function ensureThemeColor(value: string): string | undefined {
   return /^#[0-9A-Fa-f]{6}$/.test(normalized) ? normalized : undefined;
 }
 
-function parsePositiveInteger(value: unknown, fieldName: string, rowIndex: number): number {
+function parseInteger(value: unknown, fieldName: string, rowIndex: number): number {
   const numeric = Number(value);
 
   if (!Number.isFinite(numeric) || !Number.isInteger(numeric)) {
-    throw new Error(`questions \uc2dc\ud2b8 ${rowIndex}\ud589\uc758 ${fieldName} \uac12\uc740 \uc815\uc218\uc5ec\uc57c \ud569\ub2c8\ub2e4.`);
+    throw new Error(`questions 시트 ${rowIndex}행의 ${fieldName} 값은 정수여야 합니다.`);
   }
 
   return numeric;
 }
 
 function buildQuestion(row: Record<string, unknown>, rowIndex: number, headers: string[]): Question {
-  const order = parsePositiveInteger(row.order, "order", rowIndex);
+  const order = parseInteger(row.order, "order", rowIndex);
 
   if (order < 1) {
-    throw new Error(`questions \uc2dc\ud2b8 ${rowIndex}\ud589\uc758 order \uac12\uc740 1 \uc774\uc0c1\uc774\uc5b4\uc57c \ud569\ub2c8\ub2e4.`);
+    throw new Error(`questions 시트 ${rowIndex}행의 order 값은 1 이상이어야 합니다.`);
   }
 
   const type = normalizeType(normalizeString(row.type));
 
   if (!type) {
     throw new Error(
-      `questions \uc2dc\ud2b8 ${rowIndex}\ud589\uc758 type \uac12\uc740 short_text, ox, manual, multiple_choice \uc911 \ud558\ub098\uc5ec\uc57c \ud569\ub2c8\ub2e4.`,
+      `questions 시트 ${rowIndex}행의 type 값은 short_text, ox, manual, multiple_choice 중 하나여야 합니다.`,
     );
   }
 
@@ -96,23 +96,33 @@ function buildQuestion(row: Record<string, unknown>, rowIndex: number, headers: 
   const points = Number(row.points);
 
   if (!prompt) {
-    throw new Error(`questions \uc2dc\ud2b8 ${rowIndex}\ud589\uc758 prompt \uac12\uc774 \ube44\uc5b4 \uc788\uc2b5\ub2c8\ub2e4.`);
+    throw new Error(`questions 시트 ${rowIndex}행의 prompt 값이 비어 있습니다.`);
   }
 
   if (!Number.isFinite(points) || points < 0) {
-    throw new Error(`questions \uc2dc\ud2b8 ${rowIndex}\ud589\uc758 points \uac12\uc740 0 \uc774\uc0c1\uc758 \uc22b\uc790\uc5ec\uc57c \ud569\ub2c8\ub2e4.`);
+    throw new Error(`questions 시트 ${rowIndex}행의 points 값은 0 이상의 숫자여야 합니다.`);
   }
 
   const timerValue = normalizeString(row.timerSeconds);
-  const timerSeconds = timerValue ? parsePositiveInteger(timerValue, "timerSeconds", rowIndex) : undefined;
+  const timerSeconds = timerValue ? parseInteger(timerValue, "timerSeconds", rowIndex) : undefined;
+
+  const difficultyValue = normalizeString(row.difficulty);
+  const difficulty = difficultyValue ? parseInteger(difficultyValue, "difficulty", rowIndex) : undefined;
+
+  if (difficulty !== undefined && difficulty < 1) {
+    throw new Error(`questions 시트 ${rowIndex}행의 difficulty 값은 1 이상이어야 합니다.`);
+  }
+
   const bonusLabel = normalizeString(row.bonusLabel) || undefined;
   const explanation = normalizeString(row.explanation) || undefined;
+
   const base = {
     id: `question-${order}`,
     order,
     type,
     prompt,
     points,
+    difficulty,
     timerSeconds,
     bonusLabel,
     explanation,
@@ -120,7 +130,7 @@ function buildQuestion(row: Record<string, unknown>, rowIndex: number, headers: 
 
   if (type === "short_text") {
     if (!rawAnswer) {
-      throw new Error(`questions \uc2dc\ud2b8 ${rowIndex}\ud589\uc758 answer \uac12\uc774 \ube44\uc5b4 \uc788\uc2b5\ub2c8\ub2e4.`);
+      throw new Error(`questions 시트 ${rowIndex}행의 answer 값이 비어 있습니다.`);
     }
 
     return {
@@ -134,7 +144,7 @@ function buildQuestion(row: Record<string, unknown>, rowIndex: number, headers: 
     const upper = rawAnswer.toUpperCase();
 
     if (upper !== "O" && upper !== "X") {
-      throw new Error(`questions \uc2dc\ud2b8 ${rowIndex}\ud589\uc758 ox \ubb38\ud56d answer \uac12\uc740 O \ub610\ub294 X\uc5ec\uc57c \ud569\ub2c8\ub2e4.`);
+      throw new Error(`questions 시트 ${rowIndex}행의 ox 문항 answer 값은 O 또는 X여야 합니다.`);
     }
 
     return {
@@ -150,24 +160,20 @@ function buildQuestion(row: Record<string, unknown>, rowIndex: number, headers: 
     const firstBlankIndex = rawChoices.findIndex((choice) => !choice);
 
     if (firstBlankIndex >= 0 && rawChoices.slice(firstBlankIndex + 1).some(Boolean)) {
-      throw new Error(
-        `questions \uc2dc\ud2b8 ${rowIndex}\ud589\uc758 choice \uceec\ub7fc\uc740 \uc55e\uc5d0\uc11c\ubd80\ud130 \uc21c\uc11c\ub300\ub85c \ucc44\uc6cc\uc57c \ud569\ub2c8\ub2e4.`,
-      );
+      throw new Error(`questions 시트 ${rowIndex}행의 choice 컬럼은 앞에서부터 순서대로 채워야 합니다.`);
     }
 
     const choices = rawChoices.filter(Boolean);
 
     if (choices.length < 2) {
-      throw new Error(
-        `questions \uc2dc\ud2b8 ${rowIndex}\ud589\uc758 multiple_choice \ubb38\ud56d\uc740 \ucd5c\uc18c 2\uac1c \uc774\uc0c1\uc758 choice \uac12\uc774 \ud544\uc694\ud569\ub2c8\ub2e4.`,
-      );
+      throw new Error(`questions 시트 ${rowIndex}행의 multiple_choice 문항은 최소 2개의 choice 값이 필요합니다.`);
     }
 
-    const answerNumber = parsePositiveInteger(rawAnswer, "answer", rowIndex);
+    const answerNumber = parseInteger(rawAnswer, "answer", rowIndex);
 
     if (answerNumber < 1 || answerNumber > choices.length) {
       throw new Error(
-        `questions \uc2dc\ud2b8 ${rowIndex}\ud589\uc758 multiple_choice \ubb38\ud56d answer \uac12\uc740 1~${choices.length} \uc0ac\uc774\uc5ec\uc57c \ud569\ub2c8\ub2e4.`,
+        `questions 시트 ${rowIndex}행의 multiple_choice 문항 answer 값은 1~${choices.length} 사이여야 합니다.`,
       );
     }
 
@@ -192,7 +198,7 @@ export function parseQuizData(workbookData: QuizWorkbookData): QuizSet {
   const questionTable = workbookData.questions;
 
   if (metaTable.rows.length === 0) {
-    throw new Error("meta \uc2dc\ud2b8\uc5d0\ub294 \ucd5c\uc18c 1\ud589\uc758 \uc815\ubcf4\uac00 \ud544\uc694\ud569\ub2c8\ub2e4.");
+    throw new Error("meta 시트에는 최소 1행의 정보가 필요합니다.");
   }
 
   const meta = metaTable.rows[0];
@@ -203,23 +209,23 @@ export function parseQuizData(workbookData: QuizWorkbookData): QuizSet {
   const themeColor = ensureThemeColor(normalizeString(meta.themeColor));
 
   if (!subject || !setName || !title) {
-    throw new Error("meta \uc2dc\ud2b8\uc5d0\ub294 subject, setName, title \uac12\uc774 \ubaa8\ub450 \ud544\uc694\ud569\ub2c8\ub2e4.");
+    throw new Error("meta 시트에는 subject, setName, title 값이 모두 필요합니다.");
   }
 
   if (questionTable.rows.length === 0) {
-    throw new Error("questions \uc2dc\ud2b8\uc5d0\ub294 \ucd5c\uc18c 1\uac1c\uc758 \ubb38\ud56d\uc774 \ud544\uc694\ud569\ub2c8\ub2e4.");
+    throw new Error("questions 시트에는 최소 1개의 문항이 필요합니다.");
   }
 
   for (const header of REQUIRED_QUESTION_HEADERS) {
     if (!questionTable.headers.includes(header)) {
-      throw new Error(`questions \uc2dc\ud2b8\uc5d0 ${header} \uceec\ub7fc\uc774 \uc5c6\uc2b5\ub2c8\ub2e4.`);
+      throw new Error(`questions 시트에 ${header} 컬럼이 없습니다.`);
     }
   }
 
   const rules = ruleTable.rows.map((row) => normalizeString(row.rule)).filter(Boolean);
 
   if (rules.length === 0) {
-    throw new Error("rules \uc2dc\ud2b8\uc5d0\ub294 \ucd5c\uc18c 1\uac1c\uc758 rule \uac12\uc774 \ud544\uc694\ud569\ub2c8\ub2e4.");
+    throw new Error("rules 시트에는 최소 1개의 rule 값이 필요합니다.");
   }
 
   const questions = questionTable.rows.map((row, index) => buildQuestion(row, index + 2, questionTable.headers));
@@ -227,7 +233,7 @@ export function parseQuizData(workbookData: QuizWorkbookData): QuizSet {
 
   for (const question of questions) {
     if (orderSet.has(question.order)) {
-      throw new Error(`questions \uc2dc\ud2b8\uc5d0 \uc911\ubcf5\ub41c order \uac12(${question.order})\uc774 \uc788\uc2b5\ub2c8\ub2e4.`);
+      throw new Error(`questions 시트에 중복된 order 값(${question.order})이 있습니다.`);
     }
 
     orderSet.add(question.order);

@@ -4,7 +4,7 @@ import { HomePage } from "./HomePage";
 import { HostPage } from "./HostPage";
 import { ScreenPage } from "./ScreenPage";
 import { sampleQuizSet } from "../features/import/sampleQuiz";
-import { createInitialSessionState, createParticipants } from "../features/session/sessionReducer";
+import { createInitialSessionState, createParticipants, getAnswerText } from "../features/session/sessionReducer";
 import { saveQuizSet, saveSession, SESSION_STORAGE_KEY } from "../features/storage/quizStorage";
 import { MockBroadcastChannel } from "../test/mockBroadcastChannel";
 import { renderMemoryRoutes } from "../test/renderMemoryRoutes";
@@ -50,14 +50,14 @@ describe("app flow", () => {
     expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toContain("00000000-0000-4000-8000-000000000000");
   });
 
-  it("발표 화면은 저장된 세트가 없어도 호스트에게 스냅샷을 다시 받아 복원한다", async () => {
+  it("발표 화면은 저장된 세트가 없어도 호스트에게 스냅샷을 다시 받아 복원된다", async () => {
     const customQuizSet: QuizSet = {
       ...sampleQuizSet,
       id: "custom-social-april",
       subject: "사회",
       setName: "4월 사회 골든벨",
       title: "6학년 1반 4월 사회 골든벨",
-      subtitle: "호스트 스냅샷 재요청 테스트",
+      subtitle: "호스트 재요청 테스트",
     };
     const session = createInitialSessionState(customQuizSet, createParticipants(["민호", "수아"]), "session-sync");
 
@@ -69,13 +69,13 @@ describe("app flow", () => {
     window.localStorage.setItem("golden-bell:quiz-sets", JSON.stringify([]));
 
     const screenView = renderMemoryRoutes([{ path: "/screen/:sessionId", element: <ScreenPage /> }], ["/screen/session-sync"]);
-
     const screenRoot = within(screenView.container);
+
     expect((await screenRoot.findAllByText(customQuizSet.title)).length).toBeGreaterThan(0);
     expect(screenRoot.getByText("사회")).toBeTruthy();
   });
 
-  it("BroadcastChannel이 없어도 storage 이벤트로 발표 화면을 갱신한다", async () => {
+  it("BroadcastChannel이 없어도 storage 이벤트로 발표 화면이 갱신된다", async () => {
     vi.stubGlobal("BroadcastChannel", undefined);
 
     const session = createInitialSessionState(sampleQuizSet, createParticipants(["민호"]), "session-storage-sync");
@@ -109,7 +109,7 @@ describe("app flow", () => {
     });
 
     await waitFor(() => {
-      expect(screenRoot.getByText("자신의 삶")).toBeTruthy();
+      expect(screenRoot.getByText(getAnswerText(sampleQuizSet.questions[0]))).toBeTruthy();
     });
   });
 });

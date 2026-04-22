@@ -72,6 +72,13 @@ function isQuestion(value: unknown): value is Question {
     return false;
   }
 
+  if (
+    value.difficulty !== undefined &&
+    (typeof value.difficulty !== "number" || !Number.isInteger(value.difficulty) || value.difficulty < 1)
+  ) {
+    return false;
+  }
+
   if (value.bonusLabel !== undefined && typeof value.bonusLabel !== "string") {
     return false;
   }

@@ -41,7 +41,7 @@ describe("sessionReducer", () => {
     expect(snapshot.state.phase).toBe("question");
   });
 
-  it("이미 채점한 문항도 다시 반영하면 점수가 재계산된다", () => {
+  it("이미 채점한 문항을 다시 반영하면 점수가 재계산된다", () => {
     const participants = createParticipants(["민호", "수아"]);
     let snapshot = {
       quizSet: sampleQuizSet,
@@ -59,7 +59,7 @@ describe("sessionReducer", () => {
       },
     });
 
-    expect(snapshot.state.participants[0].score).toBe(1);
+    expect(snapshot.state.participants[0].score).toBe(sampleQuizSet.questions[0].points);
     expect(snapshot.state.participants[1].wrongCount).toBe(1);
 
     snapshot = sessionReducer(snapshot, {
@@ -73,12 +73,12 @@ describe("sessionReducer", () => {
 
     expect(snapshot.state.participants[0].score).toBe(0);
     expect(snapshot.state.participants[0].wrongCount).toBe(1);
-    expect(snapshot.state.participants[1].score).toBe(1);
+    expect(snapshot.state.participants[1].score).toBe(sampleQuizSet.questions[0].points);
     expect(snapshot.state.participants[1].wrongCount).toBe(0);
     expect(snapshot.state.scoredQuestionIds).toEqual([sampleQuizSet.questions[0].id]);
   });
 
-  it("단일 화면 이전 이동은 이전 문제의 정답 공개로 돌아간다", () => {
+  it("단일 화면 이전 이동은 이전 문항의 정답 공개로 돌아간다", () => {
     const participants = createParticipants(["민호"]);
     let snapshot = {
       quizSet: sampleQuizSet,
@@ -98,7 +98,7 @@ describe("sessionReducer", () => {
     const leaderboard = getLeaderboard([
       { id: "1", name: "민호", score: 5, correctCount: 2, wrongCount: 0 },
       { id: "2", name: "수아", score: 5, correctCount: 2, wrongCount: 1 },
-      { id: "3", name: "지윤", score: 3, correctCount: 1, wrongCount: 0 },
+      { id: "3", name: "지우", score: 3, correctCount: 1, wrongCount: 0 },
     ]);
 
     expect(leaderboard[0].rank).toBe(1);
@@ -113,6 +113,6 @@ describe("sessionReducer", () => {
       throw new Error("객관식 샘플 문항을 찾지 못했습니다.");
     }
 
-    expect(getAnswerText(question)).toBe("1번");
+    expect(getAnswerText(question)).toBe(`${question.correctChoiceIndex + 1}번`);
   });
 });

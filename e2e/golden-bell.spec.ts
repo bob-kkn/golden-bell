@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { sampleQuizSet } from "../src/features/import/sampleQuiz";
+import { getAnswerText } from "../src/features/session/sessionReducer";
 
 test("단일 화면은 키보드와 클릭으로 앞뒤 진행된다", async ({ page }) => {
   await page.goto("/");
@@ -11,16 +12,16 @@ test("단일 화면은 키보드와 클릭으로 앞뒤 진행된다", async ({ 
   await expect(page.getByText("다 같이 집중해 주세요.")).toBeVisible();
 
   await page.keyboard.press("Space");
-  await expect(page.getByText(sampleQuizSet.questions[0].prompt)).toBeVisible();
+  await expect(page.getByText(/단원 제목:/)).toBeVisible();
 
   await page.locator("main.screen-shell").click({ position: { x: 200, y: 200 } });
-  await expect(page.getByText("자신의 삶")).toBeVisible();
+  await expect(page.getByText(getAnswerText(sampleQuizSet.questions[0]))).toBeVisible();
 
   await page.keyboard.press("ArrowDown");
   await expect(page.getByText(sampleQuizSet.questions[1].prompt)).toBeVisible();
 
   await page.keyboard.press("ArrowUp");
-  await expect(page.getByText("자신의 삶")).toBeVisible();
+  await expect(page.getByText(getAnswerText(sampleQuizSet.questions[0]))).toBeVisible();
 });
 
 test("호스트 조작은 발표 화면에 즉시 반영된다", async ({ browser }) => {
@@ -45,10 +46,10 @@ test("호스트 조작은 발표 화면에 즉시 반영된다", async ({ browse
   await expect(screenPage.getByText("다 같이 집중해 주세요.")).toBeVisible();
 
   await hostPage.locator(".stage-actions button").first().click();
-  await expect(screenPage.getByText(sampleQuizSet.questions[0].prompt)).toBeVisible();
+  await expect(screenPage.getByText(/단원 제목:/)).toBeVisible();
 
   await hostPage.locator(".stage-actions button").first().click();
-  await expect(screenPage.getByText("자신의 삶")).toBeVisible();
+  await expect(screenPage.getByText(getAnswerText(sampleQuizSet.questions[0]))).toBeVisible();
 
   await hostPage.locator(".stage-actions button").first().click();
   await hostPage.locator(".stage-actions button").nth(2).click();

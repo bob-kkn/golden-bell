@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HostPage } from "./HostPage";
 import { PlayPage } from "./PlayPage";
 import { sampleQuizSet } from "../features/import/sampleQuiz";
-import { createInitialSessionState, createParticipants } from "../features/session/sessionReducer";
+import { createInitialSessionState, createParticipants, getAnswerText } from "../features/session/sessionReducer";
 import { saveQuizSet, saveSession } from "../features/storage/quizStorage";
 import { MockBroadcastChannel } from "../test/mockBroadcastChannel";
 import { renderMemoryRoutes } from "../test/renderMemoryRoutes";
@@ -67,7 +67,7 @@ describe("interaction flow", () => {
     expect(await playRoot.findByText("다 같이 집중해 주세요.")).toBeTruthy();
 
     fireEvent.keyDown(window, { key: " ", code: "Space" });
-    expect(await playRoot.findByText(sampleQuizSet.questions[0].prompt)).toBeTruthy();
+    expect(await playRoot.findByText(/단원 제목:/)).toBeTruthy();
 
     const stage = playView.container.querySelector("main.screen-shell");
     if (!(stage instanceof HTMLElement)) {
@@ -75,16 +75,16 @@ describe("interaction flow", () => {
     }
 
     fireEvent.click(stage);
-    expect(await playRoot.findByText("자신의 삶")).toBeTruthy();
+    expect(await playRoot.findByText(getAnswerText(sampleQuizSet.questions[0]))).toBeTruthy();
 
     fireEvent.keyDown(window, { key: "ArrowDown", code: "ArrowDown" });
-    expect(await playRoot.findByText(sampleQuizSet.questions[1].prompt)).toBeTruthy();
+    expect(await playRoot.findByText(/분단으로 고향을 잃은/)).toBeTruthy();
 
     fireEvent.keyDown(window, { key: "ArrowUp", code: "ArrowUp" });
-    expect(await playRoot.findByText("자신의 삶")).toBeTruthy();
+    expect(await playRoot.findByText(getAnswerText(sampleQuizSet.questions[0]))).toBeTruthy();
   });
 
-  it("호스트는 이미 반영한 점수도 다시 수정할 수 있다", async () => {
+  it("호스트는 이미 반영한 점수를 다시 수정할 수 있다", async () => {
     const session = createInitialSessionState(sampleQuizSet, createParticipants(["민호", "수아"]), "session-host-rescore");
     saveSession(session);
 
@@ -102,7 +102,7 @@ describe("interaction flow", () => {
     fireEvent.click(getStageButtons(hostView.container)[0]);
 
     await waitFor(() => {
-      expect(within(minhoRow).getByText("1점")).toBeTruthy();
+      expect(within(minhoRow).getByText(`${sampleQuizSet.questions[0].points}점`)).toBeTruthy();
       expect(within(suaRow).getByText("0점")).toBeTruthy();
     });
 
@@ -112,7 +112,7 @@ describe("interaction flow", () => {
 
     await waitFor(() => {
       expect(within(minhoRow).getByText("0점")).toBeTruthy();
-      expect(within(suaRow).getByText("1점")).toBeTruthy();
+      expect(within(suaRow).getByText(`${sampleQuizSet.questions[0].points}점`)).toBeTruthy();
     });
   });
 
@@ -125,7 +125,7 @@ describe("interaction flow", () => {
     fireEvent.click(getStageButtons(hostView.container)[0]);
     fireEvent.click(getStageButtons(hostView.container)[0]);
 
-    expect(getHostTimerText(hostView.container)).toBe("20");
+    expect(getHostTimerText(hostView.container)).toBe(String(sampleQuizSet.questions[0].timerSeconds));
 
     vi.useFakeTimers();
 
@@ -136,7 +136,7 @@ describe("interaction flow", () => {
       await vi.advanceTimersByTimeAsync(1000);
     });
 
-    expect(getHostTimerText(hostView.container)).toBe("19");
+    expect(getHostTimerText(hostView.container)).toBe(String((sampleQuizSet.questions[0].timerSeconds ?? 0) - 1));
 
     stageButtons = getStageButtons(hostView.container);
     fireEvent.click(stageButtons[1]);
@@ -145,14 +145,14 @@ describe("interaction flow", () => {
       await vi.advanceTimersByTimeAsync(2000);
     });
 
-    expect(getHostTimerText(hostView.container)).toBe("19");
+    expect(getHostTimerText(hostView.container)).toBe(String((sampleQuizSet.questions[0].timerSeconds ?? 0) - 1));
 
     stageButtons = getStageButtons(hostView.container);
     fireEvent.click(stageButtons[2]);
-    expect(getHostTimerText(hostView.container)).toBe("20");
+    expect(getHostTimerText(hostView.container)).toBe(String(sampleQuizSet.questions[0].timerSeconds));
   });
 
-  it("마지막 문제 채점 후 최종 순위표로 이동한다", async () => {
+  it("마지막 문항 채점 뒤 최종 순위표로 이동한다", async () => {
     const oneQuestionQuizSet: QuizSet = {
       ...sampleQuizSet,
       id: "single-question-finale",
@@ -186,7 +186,7 @@ describe("interaction flow", () => {
     await waitFor(() => {
       expect(screen.getByText("수업 마무리 순위표")).toBeTruthy();
       expect(screen.getByText("민호")).toBeTruthy();
-      expect(screen.getByText("1위")).toBeTruthy();
+      expect(screen.getByText(`${sampleQuizSet.questions[0].points}점`)).toBeTruthy();
     });
   });
 
@@ -221,9 +221,9 @@ describe("interaction flow", () => {
     fireEvent.keyDown(window, { key: "Enter", code: "Enter" });
     fireEvent.keyDown(window, { key: " ", code: "Space" });
 
-    expect(await playRoot.findByText(multipleChoiceQuestion.prompt)).toBeTruthy();
-    expect(playRoot.getByText("비유")).toBeTruthy();
-    expect(playRoot.getByText("예측")).toBeTruthy();
+    expect(await playRoot.findByText(/남북 공동 편찬 사업/)).toBeTruthy();
+    expect(playRoot.getByText(multipleChoiceQuestion.choices[0])).toBeTruthy();
+    expect(playRoot.getByText(multipleChoiceQuestion.choices[multipleChoiceQuestion.choices.length - 1])).toBeTruthy();
 
     const stage = playView.container.querySelector("main.screen-shell");
     if (!(stage instanceof HTMLElement)) {
@@ -232,7 +232,7 @@ describe("interaction flow", () => {
 
     fireEvent.click(stage);
 
-    expect(await playRoot.findByText("1번")).toBeTruthy();
-    expect(playRoot.getByText("비유")).toBeTruthy();
+    expect(await playRoot.findByText(getAnswerText(multipleChoiceQuestion))).toBeTruthy();
+    expect(playRoot.getByText(multipleChoiceQuestion.choices[multipleChoiceQuestion.correctChoiceIndex])).toBeTruthy();
   });
 });
