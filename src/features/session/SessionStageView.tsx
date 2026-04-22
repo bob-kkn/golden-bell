@@ -1,5 +1,5 @@
+import { useEffect, useMemo, useState } from "react";
 import type { Question, QuizSet, SessionPhase, SessionState } from "../../types/quiz";
-import { getPublicAssetUrl } from "../../routes/routePaths";
 import { getAnswerText, getLeaderboard } from "./sessionReducer";
 
 interface SessionStageViewProps {
@@ -24,20 +24,36 @@ function getQuestionTypeLabel(type: QuizSet["questions"][number]["type"]): strin
   return "단답형";
 }
 
+function getQuestionTypeSignal(type: QuizSet["questions"][number]["type"]): string {
+  if (type === "ox") {
+    return "OX_QUIZ";
+  }
+
+  if (type === "multiple_choice") {
+    return "MULTI_CHOICE";
+  }
+
+  if (type === "manual") {
+    return "ORAL_ORDER";
+  }
+
+  return "FILL_IN_BLANK";
+}
+
 function getInstruction(question: Question): string {
   if (question.type === "ox") {
-    return "O 또는 X를 크게 표시해 주세요.";
+    return "O 또는 X를 명확하게 표시해 주세요.";
   }
 
   if (question.type === "multiple_choice") {
-    return "정답 번호를 기억하고 손들 준비를 하세요.";
+    return "선택지를 보고 정답 번호를 기억해 주세요.";
   }
 
   if (question.type === "manual") {
-    return "순서대로 말할 준비를 하세요.";
+    return "손들고 순서대로 답할 준비를 해 주세요.";
   }
 
-  return "정답이 떠오르면 손들고 말할 준비를 하세요.";
+  return "정답이 떠오르면 손들고 말할 준비를 해 주세요.";
 }
 
 function getPhaseTitle(phase: SessionPhase): string {
@@ -60,13 +76,97 @@ function getPhaseTitle(phase: SessionPhase): string {
   return "문제";
 }
 
-function formatStars(count: number): string {
-  const normalized = Math.max(1, Math.round(count));
-  return "★".repeat(normalized);
+function getPhaseSignal(phase: SessionPhase): string {
+  if (phase === "intro") {
+    return "BOOT";
+  }
+
+  if (phase === "rules") {
+    return "RULESET";
+  }
+
+  if (phase === "answer") {
+    return "ANSWER";
+  }
+
+  if (phase === "leaderboard") {
+    return "RANKING";
+  }
+
+  return "QUERY";
+}
+
+function getSubjectSignal(subject: string): string {
+  const subjectMap: Record<string, string> = {
+    국어: "KOREAN",
+    사회: "SOCIAL_STUDIES",
+    수학: "MATHEMATICS",
+    과학: "SCIENCE",
+    영어: "ENGLISH",
+  };
+
+  return subjectMap[subject] ?? subject.replace(/\s+/g, "_").toUpperCase();
+}
+
+function getContextText(quizSet: QuizSet): string {
+  const parts = quizSet.subtitle
+    ?.split("|")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts && parts.length > 1) {
+    return parts[1];
+  }
+
+  if (parts && parts.length === 1) {
+    return parts[0];
+  }
+
+  return `${quizSet.setName} ${quizSet.subject}`;
+}
+
+function formatScoreStars(count: number): string {
+  return "★".repeat(Math.max(1, Math.round(count)));
 }
 
 function getDifficulty(question: Question): number {
-  return question.difficulty ?? question.points;
+  return question.difficulty ?? Math.min(3, Math.max(1, question.points));
+}
+
+function useClockText(): string {
+  const formatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      }),
+    [],
+  );
+  const [clockText, setClockText] = useState(() => formatter.format(new Date()));
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setClockText(formatter.format(new Date()));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [formatter]);
+
+  return clockText;
+}
+
+function renderStarMeter(level: number, max: number = 3) {
+  return (
+    <span className="screen-stars" aria-label={`${level}점 척도`}>
+      {Array.from({ length: max }, (_, index) => (
+        <span className={`screen-stars__star ${index < level ? "is-active" : ""}`} key={`${level}-${index}`}>
+          ★
+        </span>
+      ))}
+    </span>
+  );
 }
 
 function renderMultipleChoiceOptions(
@@ -172,8 +272,8 @@ function renderHostView(quizSet: QuizSet, state: SessionState) {
       <div className="host-board__header">
         <span className="badge">{getQuestionTypeLabel(currentQuestion.type)}</span>
         <span className="badge">{currentQuestion.order}번</span>
-        <span className="badge">점수 {formatStars(currentQuestion.points)}</span>
-        <span className="badge">난이도 {formatStars(getDifficulty(currentQuestion))}</span>
+        <span className="badge">점수 {formatScoreStars(currentQuestion.points)}</span>
+        <span className="badge">난이도 {formatScoreStars(getDifficulty(currentQuestion))}</span>
         {currentQuestion.bonusLabel ? <span className="badge">{currentQuestion.bonusLabel}</span> : null}
       </div>
       <div className="host-board__body">
@@ -206,7 +306,43 @@ function renderHostView(quizSet: QuizSet, state: SessionState) {
   );
 }
 
-function renderScreenView(quizSet: QuizSet, state: SessionState) {
+function renderQuestionChrome(quizSet: QuizSet, question: Question, phase: SessionPhase) {
+  return (
+    <>
+      <div className="screen-status-strip">
+        <div className="screen-segment screen-segment--primary">
+          {getQuestionTypeSignal(question.type)} / {getQuestionTypeLabel(question.type)}
+        </div>
+        <div className="screen-segment">// {getContextText(quizSet)}</div>
+        <div className="screen-segment screen-segment--compact">
+          <span className="screen-segment__label">DIFFICULTY</span>
+          {renderStarMeter(getDifficulty(question), 3)}
+        </div>
+        <div className="screen-segment screen-segment--compact">
+          <span className="screen-segment__label">PHASE</span>
+          <span>{getPhaseSignal(phase)}</span>
+        </div>
+      </div>
+
+      <div className="screen-question-meta">
+        <div className="screen-question-index">
+          <span className="screen-question-index__label">QUESTION</span>
+          <strong>{String(question.order).padStart(2, "0")}</strong>
+        </div>
+        <div className="screen-meta-card">
+          <span className="screen-meta-card__label">QUESTION_TYPE</span>
+          <strong>{getQuestionTypeLabel(question.type)}</strong>
+        </div>
+        <div className="screen-meta-card">
+          <span className="screen-meta-card__label">CONTEXT</span>
+          <strong>{getContextText(quizSet)}</strong>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function renderScreenView(quizSet: QuizSet, state: SessionState, clockText: string) {
   const currentQuestion = quizSet.questions[state.currentQuestionIndex];
   const leaderboard = getLeaderboard(state.participants);
   const topFive = leaderboard.slice(0, 5);
@@ -215,69 +351,55 @@ function renderScreenView(quizSet: QuizSet, state: SessionState) {
   return (
     <section className={`screen-stage screen-stage--${state.phase}`}>
       <div className="screen-marquee">
-        <span className="screen-marquee__chip">{quizSet.subject}</span>
-        <strong className="screen-marquee__title">{quizSet.title}</strong>
-        <span className="screen-marquee__chip">{getPhaseTitle(state.phase)}</span>
-        {showQuestionMeta ? (
-          <span className="screen-marquee__chip">
-            {currentQuestion.order}/{quizSet.questions.length}
-          </span>
-        ) : null}
+        <div className="screen-marquee__group">
+          <span className="screen-marquee__chip screen-marquee__chip--live">SYS ONLINE</span>
+          <span className="screen-marquee__chip">CLASS 6-1</span>
+          <span className="screen-marquee__chip">{getSubjectSignal(quizSet.subject)}</span>
+          <span className="screen-marquee__chip">MODE GOLDEN_BELL</span>
+        </div>
+        <div className="screen-marquee__group screen-marquee__group--right">
+          <span className="screen-marquee__chip">T {clockText}</span>
+          <span className="screen-marquee__chip">PHASE {getPhaseSignal(state.phase)}</span>
+        </div>
       </div>
 
-      <img
-        alt=""
-        aria-hidden="true"
-        className="screen-stage__mascot screen-stage__mascot--left"
-        src={getPublicAssetUrl("assets/ppt/thinking-boy.png")}
-      />
-      <img
-        alt=""
-        aria-hidden="true"
-        className="screen-stage__mascot screen-stage__mascot--right"
-        src={getPublicAssetUrl("assets/ppt/question-boy.png")}
-      />
+      {showQuestionMeta && currentQuestion ? renderQuestionChrome(quizSet, currentQuestion, state.phase) : null}
+
+      {!showQuestionMeta ? (
+        <div className="screen-status-strip">
+          <div className="screen-segment screen-segment--primary">{quizSet.setName}</div>
+          <div className="screen-segment">// {getContextText(quizSet)}</div>
+          <div className="screen-segment screen-segment--compact">
+            <span className="screen-segment__label">PARTICIPANTS</span>
+            <span>{state.participants.length}명</span>
+          </div>
+        </div>
+      ) : null}
 
       <div className={`screen-board screen-board--${state.phase}`}>
-        <div className="screen-board__header">
-          <span className="screen-board__phase">{getPhaseTitle(state.phase)}</span>
-          {showQuestionMeta ? (
-            <div className="screen-board__meta">
-              <span>{getQuestionTypeLabel(currentQuestion.type)}</span>
-              <span>점수 {formatStars(currentQuestion.points)}</span>
-              <span>난이도 {formatStars(getDifficulty(currentQuestion))}</span>
-              {currentQuestion.bonusLabel ? <span>{currentQuestion.bonusLabel}</span> : null}
-            </div>
-          ) : (
-            <div className="screen-board__meta">
-              <span>{quizSet.setName}</span>
-              <span>{state.participants.length}명 참가</span>
-            </div>
-          )}
-        </div>
-
         {state.phase === "intro" ? (
           <div className="screen-board__body screen-board__body--intro">
-            <p className="screen-board__eyebrow">READY?</p>
+            <p className="screen-board__eyebrow">SYSTEM_READY</p>
             <h1 className="screen-board__title">{quizSet.title}</h1>
             <p className="screen-board__subtitle">
               {quizSet.subtitle || "준비가 되면 바로 문제를 시작합니다."}
             </p>
             <div className="screen-stage__status">
-              <span>{state.participants.length}명 도전 준비 완료</span>
-              <span>{quizSet.questions.length}문항 진행</span>
+              <span>{state.participants.length}명 접속 완료</span>
+              <span>{quizSet.questions.length}문항 로드 완료</span>
+              <span>{state.timerModeEnabled ? "타이머 모드 ON" : "타이머 모드 OFF"}</span>
             </div>
           </div>
         ) : null}
 
         {state.phase === "rules" ? (
           <div className="screen-board__body">
-            <p className="screen-board__eyebrow">GAME RULE</p>
-            <h2 className="screen-board__title">다 같이 집중해 주세요.</h2>
+            <p className="screen-board__eyebrow">GAME_RULE</p>
+            <h2 className="screen-board__title">진행 규칙을 확인해 주세요.</h2>
             <ol className="screen-rules">
               {quizSet.rules.map((rule, index) => (
                 <li className="screen-rules__item" key={rule}>
-                  <strong>{index + 1}</strong>
+                  <strong>{String(index + 1).padStart(2, "0")}</strong>
                   <span>{rule}</span>
                 </li>
               ))}
@@ -287,17 +409,9 @@ function renderScreenView(quizSet: QuizSet, state: SessionState) {
 
         {state.phase === "question" && currentQuestion ? (
           <div className="screen-board__body">
-            <p className="screen-board__eyebrow">QUESTION</p>
-            <h2 className="screen-prompt">{currentQuestion.prompt}</h2>
-            <div className="screen-stage__status">
-              <span>{getInstruction(currentQuestion)}</span>
-              <span>
-                {currentQuestion.type === "manual"
-                  ? "순서를 끝까지 말하면 정답입니다."
-                  : currentQuestion.type === "multiple_choice"
-                    ? "선택지를 보고 정답 번호를 기억하세요."
-                    : "정답 공개 전까지 조용히 생각하세요."}
-              </span>
+            <div className="screen-question-panel">
+              <p className="screen-board__eyebrow">{getQuestionTypeSignal(currentQuestion.type)}</p>
+              <h2 className="screen-prompt">{currentQuestion.prompt}</h2>
             </div>
             {currentQuestion.type === "ox" ? (
               <div className="screen-choice-row">
@@ -308,28 +422,36 @@ function renderScreenView(quizSet: QuizSet, state: SessionState) {
             {currentQuestion.type === "multiple_choice"
               ? renderMultipleChoiceOptions(currentQuestion, "screen", false)
               : null}
+            <div className="screen-stage__status">
+              <span>POINTS {formatScoreStars(currentQuestion.points)}</span>
+              <span>DIFFICULTY {formatScoreStars(getDifficulty(currentQuestion))}</span>
+              <span>{getInstruction(currentQuestion)}</span>
+              <span>{state.timerModeEnabled ? "타이머 옵션 켜짐" : "타이머 옵션 꺼짐"}</span>
+            </div>
           </div>
         ) : null}
 
         {state.phase === "answer" && currentQuestion ? (
           <div className="screen-board__body screen-board__body--answer">
-            <p className="screen-board__eyebrow">ANSWER</p>
-            <h2 className="screen-prompt">{currentQuestion.prompt}</h2>
-            <p className="screen-answer">{getAnswerText(currentQuestion)}</p>
-            <div className="screen-stage__status">
-              <span>획득 점수 {formatStars(currentQuestion.points)}</span>
-              <span>{currentQuestion.explanation || "다음 입력으로 다음 문항으로 넘어갑니다."}</span>
+            <div className="screen-question-panel">
+              <p className="screen-board__eyebrow">ANSWER_PACKET</p>
+              <h2 className="screen-prompt screen-prompt--answer">{currentQuestion.prompt}</h2>
             </div>
+            <p className="screen-answer">{getAnswerText(currentQuestion)}</p>
             {currentQuestion.type === "multiple_choice"
               ? renderMultipleChoiceOptions(currentQuestion, "screen", true)
               : null}
+            <div className="screen-stage__status">
+              <span>획득 점수 {formatScoreStars(currentQuestion.points)}</span>
+              <span>{currentQuestion.explanation || "다음 입력으로 다음 문항으로 이동합니다."}</span>
+            </div>
           </div>
         ) : null}
 
         {state.phase === "leaderboard" ? (
           <div className="screen-board__body">
-            <p className="screen-board__eyebrow">LEADERBOARD</p>
-            <h2 className="screen-board__title">오늘의 순위 발표</h2>
+            <p className="screen-board__eyebrow">FINAL_RANKING</p>
+            <h2 className="screen-board__title">오늘의 최종 순위</h2>
             <ol className="screen-leaderboard">
               {topFive.map((participant) => (
                 <li className={`screen-leaderboard__row ${participant.rank === 1 ? "is-top" : ""}`} key={participant.id}>
@@ -354,8 +476,10 @@ function renderScreenView(quizSet: QuizSet, state: SessionState) {
 }
 
 export function SessionStageView({ quizSet, state, mode }: SessionStageViewProps) {
+  const clockText = useClockText();
+
   if (mode === "screen") {
-    return renderScreenView(quizSet, state);
+    return renderScreenView(quizSet, state, clockText);
   }
 
   return renderHostView(quizSet, state);

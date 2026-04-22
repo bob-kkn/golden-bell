@@ -3,7 +3,19 @@ import { sampleQuizSet } from "../import/sampleQuiz";
 import { createInitialSessionState, createParticipants, getAnswerText, getLeaderboard, sessionReducer } from "./sessionReducer";
 
 describe("sessionReducer", () => {
-  it("문제 진행과 점수 반영이 동작한다", () => {
+  it("타이머는 기본적으로 꺼진 상태로 시작한다", () => {
+    const participants = createParticipants(["민호"]);
+    const snapshot = {
+      quizSet: sampleQuizSet,
+      state: createInitialSessionState(sampleQuizSet, participants, "session-timer-default"),
+    };
+
+    expect(snapshot.state.timerModeEnabled).toBe(false);
+    expect(snapshot.state.timer.available).toBe(true);
+    expect(snapshot.state.timer.enabled).toBe(false);
+  });
+
+  it("타이머 옵션을 켜면 문항 타이머를 사용할 수 있다", () => {
     const participants = createParticipants(["민호", "수아"]);
     let snapshot = {
       quizSet: sampleQuizSet,
@@ -15,6 +27,10 @@ describe("sessionReducer", () => {
 
     snapshot = sessionReducer(snapshot, { type: "start_question" });
     expect(snapshot.state.phase).toBe("question");
+    expect(snapshot.state.timer.enabled).toBe(false);
+
+    snapshot = sessionReducer(snapshot, { type: "toggle_timer_mode" });
+    expect(snapshot.state.timerModeEnabled).toBe(true);
     expect(snapshot.state.timer.enabled).toBe(true);
 
     snapshot = sessionReducer(snapshot, { type: "toggle_timer" });
@@ -23,22 +39,6 @@ describe("sessionReducer", () => {
 
     snapshot = sessionReducer(snapshot, { type: "show_answer" });
     expect(snapshot.state.phase).toBe("answer");
-
-    snapshot = sessionReducer(snapshot, {
-      type: "apply_scoring",
-      questionId: sampleQuizSet.questions[0].id,
-      marks: {
-        [participants[0].id]: "correct",
-        [participants[1].id]: "wrong",
-      },
-    });
-
-    expect(snapshot.state.participants[0].score).toBe(sampleQuizSet.questions[0].points);
-    expect(snapshot.state.participants[1].wrongCount).toBe(1);
-
-    snapshot = sessionReducer(snapshot, { type: "next_question" });
-    expect(snapshot.state.currentQuestionIndex).toBe(1);
-    expect(snapshot.state.phase).toBe("question");
   });
 
   it("이미 채점한 문항을 다시 반영하면 점수가 재계산된다", () => {

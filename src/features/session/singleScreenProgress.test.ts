@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  getSingleScreenAdvanceActions,
-  getSingleScreenRetreatActions,
-} from "./singleScreenProgress";
+import { getSingleScreenAdvanceActions, getSingleScreenRetreatActions } from "./singleScreenProgress";
 import type { SessionState } from "../../types/quiz";
 
 function createState(
@@ -14,7 +11,9 @@ function createState(
     quizSetId: "quiz-1",
     phase,
     currentQuestionIndex,
+    timerModeEnabled: false,
     timer: {
+      available: false,
       enabled: false,
       duration: 0,
       remaining: 0,

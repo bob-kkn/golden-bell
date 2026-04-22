@@ -64,7 +64,7 @@ describe("interaction flow", () => {
     expect((await playRoot.findAllByText(sampleQuizSet.title)).length).toBeGreaterThan(0);
 
     fireEvent.keyDown(window, { key: "Enter", code: "Enter" });
-    expect(await playRoot.findByText("다 같이 집중해 주세요.")).toBeTruthy();
+    expect(await playRoot.findByText("진행 규칙을 확인해 주세요.")).toBeTruthy();
 
     fireEvent.keyDown(window, { key: " ", code: "Space" });
     expect(await playRoot.findByText(/단원 제목:/)).toBeTruthy();
@@ -116,7 +116,7 @@ describe("interaction flow", () => {
     });
   });
 
-  it("호스트 타이머는 시작, 정지, 초기화가 동작한다", async () => {
+  it("타이머는 기본적으로 꺼져 있고 켜면 시작, 정지, 초기화가 동작한다", async () => {
     const session = createInitialSessionState(sampleQuizSet, createParticipants(["민호"]), "session-host-timer");
     saveSession(session);
 
@@ -125,12 +125,14 @@ describe("interaction flow", () => {
     fireEvent.click(getStageButtons(hostView.container)[0]);
     fireEvent.click(getStageButtons(hostView.container)[0]);
 
+    expect(hostView.container.querySelector(".timer--host")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "타이머 사용 켜기" }));
     expect(getHostTimerText(hostView.container)).toBe(String(sampleQuizSet.questions[0].timerSeconds));
 
     vi.useFakeTimers();
 
-    let stageButtons = getStageButtons(hostView.container);
-    fireEvent.click(stageButtons[1]);
+    fireEvent.click(screen.getByRole("button", { name: "타이머 시작" }));
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1000);
@@ -138,8 +140,7 @@ describe("interaction flow", () => {
 
     expect(getHostTimerText(hostView.container)).toBe(String((sampleQuizSet.questions[0].timerSeconds ?? 0) - 1));
 
-    stageButtons = getStageButtons(hostView.container);
-    fireEvent.click(stageButtons[1]);
+    fireEvent.click(screen.getByRole("button", { name: "타이머 정지" }));
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2000);
@@ -147,8 +148,7 @@ describe("interaction flow", () => {
 
     expect(getHostTimerText(hostView.container)).toBe(String((sampleQuizSet.questions[0].timerSeconds ?? 0) - 1));
 
-    stageButtons = getStageButtons(hostView.container);
-    fireEvent.click(stageButtons[2]);
+    fireEvent.click(screen.getByRole("button", { name: "타이머 초기화" }));
     expect(getHostTimerText(hostView.container)).toBe(String(sampleQuizSet.questions[0].timerSeconds));
   });
 

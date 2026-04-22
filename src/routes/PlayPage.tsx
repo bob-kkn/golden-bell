@@ -141,6 +141,13 @@ function PlaySessionView({ initialSnapshot }: { initialSnapshot: SessionSnapshot
         <button className="single-screen-toolbar__button" onClick={goBack} type="button">
           이전 화면
         </button>
+        <button
+          className="single-screen-toolbar__button"
+          onClick={() => dispatch({ type: "toggle_timer_mode" })}
+          type="button"
+        >
+          {snapshot.state.timerModeEnabled ? "타이머 끄기" : "타이머 켜기"}
+        </button>
         <span className="single-screen-toolbar__hint">
           Enter · Space · 클릭 다음 / ←↑ 이전 / →↓ 다음
         </span>
@@ -166,7 +173,7 @@ export function PlayPage() {
         <div className="page">
           <section className="panel stack">
             <h1>세션을 찾지 못했습니다.</h1>
-            <p className="muted">홈에서 다시 세트를 선택하고 세션을 시작해 주세요.</p>
+            <p className="muted">홈으로 돌아가 세트를 다시 선택한 뒤 세션을 시작해 주세요.</p>
           </section>
         </div>
       </main>

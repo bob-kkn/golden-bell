@@ -5,11 +5,11 @@ import { getAnswerText } from "../src/features/session/sessionReducer";
 test("단일 화면은 키보드와 클릭으로 앞뒤 진행된다", async ({ page }) => {
   await page.goto("/");
 
-  await page.locator(".grid--two > section:last-child .controls-row button").nth(1).click();
+  await page.locator(".start-mode-actions button").nth(1).click();
   await expect(page.getByText(sampleQuizSet.title).first()).toBeVisible();
 
   await page.keyboard.press("Enter");
-  await expect(page.getByText("다 같이 집중해 주세요.")).toBeVisible();
+  await expect(page.getByText("진행 규칙을 확인해 주세요.")).toBeVisible();
 
   await page.keyboard.press("Space");
   await expect(page.getByText(/단원 제목:/)).toBeVisible();
@@ -29,7 +29,7 @@ test("호스트 조작은 발표 화면에 즉시 반영된다", async ({ browse
   const hostPage = await context.newPage();
 
   await hostPage.goto("/");
-  await hostPage.locator(".grid--two > section:last-child .controls-row button").first().click();
+  await hostPage.locator(".start-mode-actions button").first().click();
   await expect(hostPage.locator(".hero .controls-row button").first()).toBeVisible();
 
   const screenUrl = await hostPage.locator(".split-note span").textContent();
@@ -43,7 +43,7 @@ test("호스트 조작은 발표 화면에 즉시 반영된다", async ({ browse
   await expect(screenPage.getByText(sampleQuizSet.title).first()).toBeVisible();
 
   await hostPage.locator(".stage-actions button").first().click();
-  await expect(screenPage.getByText("다 같이 집중해 주세요.")).toBeVisible();
+  await expect(screenPage.getByText("진행 규칙을 확인해 주세요.")).toBeVisible();
 
   await hostPage.locator(".stage-actions button").first().click();
   await expect(screenPage.getByText(/단원 제목:/)).toBeVisible();

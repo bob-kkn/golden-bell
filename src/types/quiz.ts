@@ -59,6 +59,7 @@ export type ParticipantMark = "correct" | "wrong" | "none";
 export type ScoringByQuestion = Record<string, Record<string, ParticipantMark>>;
 
 export interface TimerState {
+  available: boolean;
   enabled: boolean;
   duration: number;
   remaining: number;
@@ -70,6 +71,7 @@ export interface SessionState {
   quizSetId: string;
   phase: SessionPhase;
   currentQuestionIndex: number;
+  timerModeEnabled: boolean;
   timer: TimerState;
   participants: Participant[];
   scoringByQuestion: ScoringByQuestion;

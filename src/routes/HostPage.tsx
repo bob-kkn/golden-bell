@@ -66,6 +66,7 @@ function HostSessionView({ initialSnapshot }: { initialSnapshot: SessionSnapshot
             <span className="hero__eyebrow">{snapshot.quizSet.setName}</span>
             <span className="hero__eyebrow">{snapshot.state.participants.length}명 참가</span>
             <span className="hero__eyebrow">{getPhaseLabel(snapshot.state.phase)}</span>
+            <span className="hero__eyebrow">{snapshot.state.timerModeEnabled ? "타이머 ON" : "타이머 OFF"}</span>
           </div>
           <h1>{snapshot.quizSet.title}</h1>
           <div className="controls-row">
@@ -76,7 +77,7 @@ function HostSessionView({ initialSnapshot }: { initialSnapshot: SessionSnapshot
               단일 화면 모드
             </Link>
             <a className="ghost-button" href={screenUrl} rel="noreferrer" target="_blank">
-              발표 화면 새 탭
+              발표 화면 주소 열기
             </a>
             <button className="ghost-button" onClick={goBack} type="button">
               이전 화면
@@ -121,7 +122,7 @@ export function HostPage() {
         <div className="page">
           <section className="panel stack">
             <h1>세션을 찾지 못했습니다.</h1>
-            <p className="muted">홈에서 다시 세트를 선택하고 세션을 시작해 주세요.</p>
+            <p className="muted">홈으로 돌아가 세트를 다시 선택한 뒤 세션을 시작해 주세요.</p>
             <Link className="action-button" to={getHomePath()}>
               홈으로 이동
             </Link>

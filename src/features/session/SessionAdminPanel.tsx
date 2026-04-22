@@ -20,6 +20,7 @@ export function SessionAdminPanel({
   const alreadyScored = currentQuestion
     ? snapshot.state.scoredQuestionIds.includes(currentQuestion.id)
     : false;
+  const hasQuestionTimer = Boolean(currentQuestion?.timerSeconds);
 
   function applyScoring() {
     if (!currentQuestion) {
@@ -38,8 +39,27 @@ export function SessionAdminPanel({
       <section className="panel stack">
         <div>
           <h2>진행 제어</h2>
-          <p className="muted">지금 단계에 맞는 버튼만 활성화됩니다.</p>
+          <p className="muted">현재 단계에 맞는 버튼만 활성화됩니다.</p>
         </div>
+
+        <div className="controls-row">
+          <button
+            className={snapshot.state.timerModeEnabled ? "action-button" : "ghost-button"}
+            onClick={() => dispatch({ type: "toggle_timer_mode" })}
+            type="button"
+          >
+            {snapshot.state.timerModeEnabled ? "타이머 사용 끄기" : "타이머 사용 켜기"}
+          </button>
+          <span className="badge">{snapshot.state.timerModeEnabled ? "TIMER ON" : "TIMER OFF"}</span>
+          <span className="badge">
+            {hasQuestionTimer ? `현재 문항 ${currentQuestion?.timerSeconds}초 설정` : "현재 문항 타이머 없음"}
+          </span>
+        </div>
+
+        {snapshot.state.timerModeEnabled && !hasQuestionTimer ? (
+          <div className="help-text">현재 문항에는 타이머가 설정되어 있지 않습니다. 다음 문항부터 자동으로 적용됩니다.</div>
+        ) : null}
+
         <div className="stage-actions">
           {snapshot.state.phase === "intro" ? (
             <button className="action-button" onClick={() => dispatch({ type: "go_to_phase", phase: "rules" })} type="button">
@@ -71,7 +91,7 @@ export function SessionAdminPanel({
           {snapshot.state.phase === "answer" ? (
             <>
               <button className="action-button" onClick={applyScoring} type="button">
-                {alreadyScored ? "이번 문제 점수 다시 반영" : "이번 문제 점수 반영"}
+                {alreadyScored ? "이 문항 점수 다시 반영" : "이 문항 점수 반영"}
               </button>
               <button
                 className="ghost-button"
@@ -101,7 +121,7 @@ export function SessionAdminPanel({
           ) : null}
           {snapshot.state.phase === "leaderboard" ? (
             <button className="ghost-button" onClick={() => dispatch({ type: "go_to_phase", phase: "intro" })} type="button">
-              인트로 다시 보기
+              인트로로 다시 보기
             </button>
           ) : null}
         </div>
@@ -110,16 +130,14 @@ export function SessionAdminPanel({
       <section className="panel stack">
         <div>
           <h2>학생 채점</h2>
-          <p className="muted">
-            정답 공개 단계에서 학생별 정답과 오답을 선택한 뒤 반영하세요. 이미 반영한 문항도 다시 수정할 수 있습니다.
-          </p>
+          <p className="muted">정답 공개 단계에서 학생별로 정답, 오답, 미채점을 선택해 반영합니다.</p>
         </div>
         {snapshot.state.phase !== "answer" || !currentQuestion ? (
           <div className="empty-state">정답 공개 단계가 되면 학생별 채점 버튼이 나타납니다.</div>
         ) : (
           <>
             {alreadyScored ? (
-              <div className="help-text">이 문항은 이미 반영되었습니다. 선택을 바꾼 뒤 다시 반영하면 점수가 갱신됩니다.</div>
+              <div className="help-text">이미 반영한 문항입니다. 선택을 바꾸고 다시 반영하면 점수가 갱신됩니다.</div>
             ) : null}
             <table className="participants-table">
               <thead>

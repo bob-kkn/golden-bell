@@ -22,6 +22,7 @@ export type SessionAction =
   | { type: "previous_question" }
   | { type: "advance_stage" }
   | { type: "retreat_stage" }
+  | { type: "toggle_timer_mode" }
   | { type: "toggle_timer" }
   | { type: "tick" }
   | { type: "reset_timer" }
@@ -31,11 +32,13 @@ export type SessionAction =
       marks: Record<string, ParticipantMark>;
     };
 
-function buildTimer(question?: Question): TimerState {
+function buildTimer(question: Question | undefined, timerModeEnabled: boolean = false): TimerState {
   const duration = question?.timerSeconds ?? 0;
+  const available = duration > 0;
 
   return {
-    enabled: duration > 0,
+    available,
+    enabled: timerModeEnabled && available,
     duration,
     remaining: duration,
     running: false,
@@ -59,13 +62,15 @@ export function createInitialSessionState(
   quizSet: QuizSet,
   participants: Participant[],
   sessionId: string = crypto.randomUUID(),
+  timerModeEnabled: boolean = false,
 ): SessionState {
   return {
     sessionId,
     quizSetId: quizSet.id,
     phase: "intro",
     currentQuestionIndex: 0,
-    timer: buildTimer(quizSet.questions[0]),
+    timerModeEnabled,
+    timer: buildTimer(quizSet.questions[0], timerModeEnabled),
     participants,
     scoringByQuestion: {},
     scoredQuestionIds: [],
@@ -236,7 +241,7 @@ function retreatStage(snapshot: SessionSnapshot): SessionSnapshot {
           currentQuestionIndex: state.currentQuestionIndex - 1,
           phase: "answer",
           timer: {
-            ...buildTimer(quizSet.questions[state.currentQuestionIndex - 1]),
+            ...buildTimer(quizSet.questions[state.currentQuestionIndex - 1], state.timerModeEnabled),
             running: false,
           },
         }),
@@ -261,7 +266,7 @@ export function sessionReducer(snapshot: SessionSnapshot, action: SessionAction)
         state: withUpdatedTimestamp({
           ...state,
           phase: action.phase,
-          timer: action.phase === "question" ? buildTimer(currentQuestion) : state.timer,
+          timer: action.phase === "question" ? buildTimer(currentQuestion, state.timerModeEnabled) : state.timer,
         }),
       };
 
@@ -271,7 +276,7 @@ export function sessionReducer(snapshot: SessionSnapshot, action: SessionAction)
         state: withUpdatedTimestamp({
           ...state,
           phase: "question",
-          timer: buildTimer(currentQuestion),
+          timer: buildTimer(currentQuestion, state.timerModeEnabled),
         }),
       };
 
@@ -295,7 +300,7 @@ export function sessionReducer(snapshot: SessionSnapshot, action: SessionAction)
           state: withUpdatedTimestamp({
             ...state,
             phase: "leaderboard",
-            timer: buildTimer(undefined),
+            timer: buildTimer(undefined, state.timerModeEnabled),
           }),
         };
       }
@@ -308,7 +313,7 @@ export function sessionReducer(snapshot: SessionSnapshot, action: SessionAction)
           ...state,
           currentQuestionIndex: nextIndex,
           phase: "question",
-          timer: buildTimer(quizSet.questions[nextIndex]),
+          timer: buildTimer(quizSet.questions[nextIndex], state.timerModeEnabled),
           lastScoredQuestionId: undefined,
         }),
       };
@@ -323,7 +328,7 @@ export function sessionReducer(snapshot: SessionSnapshot, action: SessionAction)
           ...state,
           currentQuestionIndex: previousIndex,
           phase: "question",
-          timer: buildTimer(quizSet.questions[previousIndex]),
+          timer: buildTimer(quizSet.questions[previousIndex], state.timerModeEnabled),
         }),
       };
     }
@@ -333,6 +338,19 @@ export function sessionReducer(snapshot: SessionSnapshot, action: SessionAction)
 
     case "retreat_stage":
       return retreatStage(snapshot);
+
+    case "toggle_timer_mode": {
+      const nextMode = !state.timerModeEnabled;
+
+      return {
+        quizSet,
+        state: withUpdatedTimestamp({
+          ...state,
+          timerModeEnabled: nextMode,
+          timer: buildTimer(currentQuestion, nextMode),
+        }),
+      };
+    }
 
     case "toggle_timer":
       if (!state.timer.enabled) {
@@ -372,7 +390,7 @@ export function sessionReducer(snapshot: SessionSnapshot, action: SessionAction)
         quizSet,
         state: withUpdatedTimestamp({
           ...state,
-          timer: buildTimer(currentQuestion),
+          timer: buildTimer(currentQuestion, state.timerModeEnabled),
         }),
       };
 

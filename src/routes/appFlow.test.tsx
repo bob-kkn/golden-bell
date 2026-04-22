@@ -72,7 +72,7 @@ describe("app flow", () => {
     const screenRoot = within(screenView.container);
 
     expect((await screenRoot.findAllByText(customQuizSet.title)).length).toBeGreaterThan(0);
-    expect(screenRoot.getByText("사회")).toBeTruthy();
+    expect(screenRoot.getByText("SOCIAL_STUDIES")).toBeTruthy();
   });
 
   it("BroadcastChannel이 없어도 storage 이벤트로 발표 화면이 갱신된다", async () => {

@@ -181,7 +181,9 @@ function isSessionState(value: unknown): value is SessionState {
       value.phase === "answer" ||
       value.phase === "leaderboard") &&
     typeof value.currentQuestionIndex === "number" &&
+    typeof value.timerModeEnabled === "boolean" &&
     isObject(value.timer) &&
+    typeof value.timer.available === "boolean" &&
     typeof value.timer.enabled === "boolean" &&
     typeof value.timer.duration === "number" &&
     typeof value.timer.remaining === "number" &&
@@ -203,8 +205,31 @@ function normalizeSessionState(value: unknown): SessionState | null {
 
   const scoringByQuestion = normalizeScoringByQuestion(value.scoringByQuestion);
   const scoredQuestionIds = Object.keys(scoringByQuestion);
+  const rawTimer = isObject(value.timer) ? value.timer : {};
+  const duration = typeof rawTimer.duration === "number" ? rawTimer.duration : 0;
+  const available = typeof rawTimer.available === "boolean" ? rawTimer.available : duration > 0;
+  const timerModeEnabled =
+    typeof value.timerModeEnabled === "boolean"
+      ? value.timerModeEnabled
+      : typeof rawTimer.enabled === "boolean"
+        ? rawTimer.enabled
+        : false;
+  const timerEnabled = timerModeEnabled && available;
+  const remaining =
+    typeof rawTimer.remaining === "number"
+      ? Math.max(0, Math.min(rawTimer.remaining, duration))
+      : duration;
+  const running = timerEnabled && rawTimer.running === true && remaining > 0;
   const normalizedState = {
     ...value,
+    timerModeEnabled,
+    timer: {
+      available,
+      enabled: timerEnabled,
+      duration,
+      remaining,
+      running,
+    },
     scoringByQuestion,
     scoredQuestionIds:
       Array.isArray(value.scoredQuestionIds) && value.scoredQuestionIds.every((item) => typeof item === "string")

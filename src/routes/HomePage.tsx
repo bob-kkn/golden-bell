@@ -30,7 +30,8 @@ export function HomePage() {
   const navigate = useNavigate();
   const [quizSets, setQuizSets] = useState<QuizSet[]>(() => resolveQuizSets());
   const [selectedQuizId, setSelectedQuizId] = useState<string>(() => resolveQuizSets()[0]?.id ?? "");
-  const [participantText, setParticipantText] = useState("김민호\n이수아\n박지후\n정은서");
+  const [participantText, setParticipantText] = useState("김민호\n이수아\n박지우\n최서윤");
+  const [timerModeEnabled, setTimerModeEnabled] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState("");
   const [excelAction, setExcelAction] = useState<"idle" | "prefetch" | "upload" | "download">("idle");
@@ -75,6 +76,7 @@ export function HomePage() {
       setExcelAction("upload");
       const { parseQuizFile } = await loadQuizImportModule();
       const quizSet = await parseQuizFile(file);
+
       if (!saveQuizSet(quizSet)) {
         throw new Error("문제 세트를 저장하지 못했습니다. 브라우저 저장소를 확인해 주세요.");
       }
@@ -105,7 +107,7 @@ export function HomePage() {
 
   function handleStartSession(mode: "host" | "play") {
     if (!storageReady) {
-      setUploadError("브라우저 저장소를 사용할 수 없어 세션을 시작할 수 없습니다. 같은 브라우저에서 저장 기능을 허용해 주세요.");
+      setUploadError("브라우저 저장소를 사용할 수 없어 세션을 시작할 수 없습니다. 브라우저 설정을 확인해 주세요.");
       return;
     }
 
@@ -122,7 +124,7 @@ export function HomePage() {
     }
 
     const sessionId = crypto.randomUUID();
-    const initialState = createInitialSessionState(selectedQuiz, participants, sessionId);
+    const initialState = createInitialSessionState(selectedQuiz, participants, sessionId, timerModeEnabled);
 
     if (!saveSession(initialState)) {
       setUploadError("세션을 저장하지 못했습니다. 브라우저 저장 공간을 확인한 뒤 다시 시도해 주세요.");
@@ -137,10 +139,11 @@ export function HomePage() {
       <div className="page stack">
         <StorageNoticeBanner />
         <section className="hero">
-          <span className="hero__eyebrow">도전 골든벨 운영 웹앱</span>
-          <h1>과목별 문제 세트를 불러와 발표 화면과 함께 바로 진행할 수 있는 교실용 문제판</h1>
+          <span className="hero__eyebrow">교실용 골든벨 웹앱</span>
+          <h1>엑셀 세트를 불러오고 발표 화면과 진행 화면을 바로 시작합니다.</h1>
           <p>
-            엑셀로 문제를 가져오고, 교사용 화면에서 진행과 점수를 관리하고, 발표용 화면은 별도 전광판처럼 띄울 수 있습니다.
+            같은 브라우저에서 분리 화면 또는 단일 화면으로 진행할 수 있습니다. 점수 집계는 교사 수동 채점,
+            발표 화면은 전광판용 전체 화면 기준으로 맞춰져 있습니다.
           </p>
           <div className="controls-row">
             <button
@@ -175,7 +178,7 @@ export function HomePage() {
               />
             </label>
           </div>
-          {excelAction === "prefetch" ? <div className="help-text">엑셀 기능을 준비하는 중입니다.</div> : null}
+          {excelAction === "prefetch" ? <div className="help-text">엑셀 기능을 준비하고 있습니다.</div> : null}
           {uploadSuccess ? <div className="help-text">{uploadSuccess}</div> : null}
           {uploadError ? <div className="error-text">{uploadError}</div> : null}
         </section>
@@ -184,7 +187,7 @@ export function HomePage() {
           <section className="panel stack">
             <div>
               <h2>세트 선택</h2>
-              <p className="muted">샘플 세트와 업로드한 세트가 함께 표시됩니다.</p>
+              <p className="muted">기본 세트와 업로드한 세트가 함께 표시됩니다.</p>
             </div>
             <div className="stack">
               {groupedQuizSets.map(([subject, items]) => (
@@ -217,7 +220,7 @@ export function HomePage() {
           <section className="panel stack">
             <div>
               <h2>진행 준비</h2>
-              <p className="muted">학생 이름을 줄바꿈이나 쉼표로 입력해 주세요.</p>
+              <p className="muted">학생 이름은 줄바꿈 또는 쉼표로 구분해 입력합니다.</p>
             </div>
             <div className="field">
               <label htmlFor="participantText">학생 명단</label>
@@ -226,6 +229,19 @@ export function HomePage() {
                 onChange={(event) => setParticipantText(event.target.value)}
                 value={participantText}
               />
+            </div>
+            <div className="field">
+              <label>문항 타이머</label>
+              <div className="controls-row">
+                <button
+                  className={timerModeEnabled ? "action-button" : "ghost-button"}
+                  onClick={() => setTimerModeEnabled((current) => !current)}
+                  type="button"
+                >
+                  {timerModeEnabled ? "타이머 사용 중" : "타이머 기본 끔"}
+                </button>
+                <span className="muted">기본은 꺼져 있습니다. 필요하면 진행 중에도 다시 켤 수 있습니다.</span>
+              </div>
             </div>
             {selectedQuiz ? (
               <div className="panel panel--accent" style={buildThemeStyle(selectedQuiz.themeColor)}>
@@ -240,7 +256,7 @@ export function HomePage() {
             ) : (
               <div className="empty-state">진행할 세트를 선택해 주세요.</div>
             )}
-            <div className="controls-row">
+            <div className="controls-row start-mode-actions">
               <button
                 className="action-button"
                 disabled={!storageReady}
